@@ -1,0 +1,20 @@
+.idea
+.env
+.env.testing
+.vscode
+vendor
+*.test
+*.out
+*.so
+*.dll
+*.dylib
+.DS_Store
+build
+proto
+application.yaml
+
+# exception
+!Dockerfile.test
+!application.test.yaml
+
+db/schema.sql
