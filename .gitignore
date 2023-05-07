@@ -1,0 +1,16 @@
+.env
+.env.testing
+.vscode
+vendor
+*.test
+*.out
+*.so
+*.dll
+*.dylib
+.DS_Store
+build
+proto
+
+
+# exception
+!Dockerfile.test
