@@ -14,18 +14,18 @@ var (
 
 type OpenDotaAPI struct {
 	httpClient *http.Client
-	APIURL     string
+	BaseURL    string
 }
 
-func NewMatchAPI(httpClient *http.Client, APIURL string) *OpenDotaAPI {
+func NewMatchAPI(httpClient *http.Client, BaseURL string) *OpenDotaAPI {
 	return &OpenDotaAPI{
 		httpClient: httpClient,
-		APIURL:     APIURL,
+		BaseURL:    BaseURL,
 	}
 }
 
 func (m *OpenDotaAPI) FetchMatchDetail(ctx context.Context, matchID int64) (MatchDetail, error) {
-	matchDetailURL := fmt.Sprintf("%s/matches/%d", m.APIURL, matchID)
+	matchDetailURL := fmt.Sprintf("%s/matches/%d", m.BaseURL, matchID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, matchDetailURL, nil)
 	if err != nil {
