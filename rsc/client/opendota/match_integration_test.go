@@ -13,12 +13,12 @@ import (
 
 func TestFetchMatchDetail(t *testing.T) {
 	ctx := context.Background()
+	openDotaAPIURL := "https://api.opendota.com/api"
+	httpClient := http.DefaultClient
+
+	openDotaAPI := NewMatchAPI(httpClient, openDotaAPIURL)
+
 	t.Run("fetch match detail dota2 should be success", func(t *testing.T) {
-		openDotaAPIURL := "https://api.opendota.com/api"
-		httpClient := http.DefaultClient
-
-		openDotaAPI := NewMatchAPI(httpClient, openDotaAPIURL)
-
 		// my personal match id
 		matchID := 271145478
 
@@ -29,11 +29,6 @@ func TestFetchMatchDetail(t *testing.T) {
 	})
 
 	t.Run("fetch match detail dota2 should failed because match id is not found", func(t *testing.T) {
-		openDotaAPIURL := "https://api.opendota.com/api"
-		httpClient := http.DefaultClient
-
-		openDotaAPI := NewMatchAPI(httpClient, openDotaAPIURL)
-
 		matchID := 0
 
 		matchDetail, err := openDotaAPI.FetchMatchDetail(ctx, int64(matchID))
