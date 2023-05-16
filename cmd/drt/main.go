@@ -8,11 +8,11 @@ import (
 )
 
 func main() {
-	app := tview.NewApplication()
+	application := tview.NewApplication()
 
-	err := ui.MainPage(app)
+	app := ui.NewApp(application)
 
-	if err != nil {
+	if err := app.MainPage(); err != nil {
 		log.Fatal(err)
 	}
 }

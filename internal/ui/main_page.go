@@ -4,7 +4,17 @@ import (
 	"github.com/rivo/tview"
 )
 
-func MainPage(app *tview.Application) error {
+type App struct {
+	*tview.Application
+}
+
+func NewApp(app *tview.Application) *App {
+	return &App{
+		Application: app,
+	}
+}
+
+func (a *App) MainPage() error {
 	layoutListDownload := tview.NewFlex().
 		SetDirection(tview.FlexRow)
 
@@ -12,6 +22,12 @@ func MainPage(app *tview.Application) error {
 		SetText("Downloads").
 		SetTextAlign(tview.AlignLeft)
 
+	// TODO
+	// Call function to get list of replay DotA2 from
+	// local folder in `~/.config/drt/`
+	//
+	// And add binding to `selected func` redirect to new page
+	// which will display a replay
 	listDownload := tview.NewList().
 		AddItem("123456781", "Replay 1", '1', nil).
 		AddItem("123456781", "Replay 2", '2', nil)
@@ -25,7 +41,11 @@ func MainPage(app *tview.Application) error {
 	form := tview.NewForm().
 		AddInputField("Match ID", "", 20, nil, nil).
 		AddButton("Find", func() {
-			app.SetFocus(listDownload)
+			// TODO
+			// If match id is already exists in local folder then
+			// 	- binding to new page which will display a replay
+			// otherwise
+			// 	- download first then redirect to new page which will display a replay
 		}).
 		SetHorizontal(true)
 
@@ -43,7 +63,7 @@ func MainPage(app *tview.Application) error {
 		AddItem(form, 0, 2, false).
 		AddItem(layoutListDownload, 0, 2, false)
 
-	err := app.SetRoot(rootLayout, true).SetFocus(form).Run()
+	err := a.Application.SetRoot(rootLayout, true).SetFocus(form).Run()
 
 	if err != nil {
 		return err
