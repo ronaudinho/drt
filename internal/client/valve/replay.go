@@ -13,12 +13,16 @@ var (
 	ErrDownloadRelpay = fmt.Errorf("failed to download the dota2 replay")
 )
 
-type replay struct {
+const (
+	DefaultDestination = "/tmp"
+)
+
+type Replay struct {
 	httpClient *http.Client
 }
 
-func NewReplay(httpClient *http.Client) *replay {
-	return &replay{
+func NewReplay(httpClient *http.Client) *Replay {
+	return &Replay{
 		httpClient: httpClient,
 	}
 }
@@ -32,7 +36,7 @@ func NewReplay(httpClient *http.Client) *replay {
 // Based on that value, we can download the replay DotA2 file directly using that URL.
 //
 // destination parameter specifies the file destination to save the downloaded replay file.
-func (r *replay) Download(ctx context.Context, replayURL string, destination string) error {
+func (r *Replay) Download(ctx context.Context, replayURL string, destination string) error {
 	fileName := getFileName(replayURL)
 
 	// create location for destination file
