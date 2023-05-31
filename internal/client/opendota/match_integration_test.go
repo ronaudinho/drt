@@ -13,10 +13,7 @@ import (
 
 func TestFetchMatchDetail(t *testing.T) {
 	ctx := context.Background()
-	openDotaAPIURL := "https://api.opendota.com/api"
-	httpClient := http.DefaultClient
-
-	openDotaAPI := NewMatchAPI(httpClient, openDotaAPIURL)
+	openDotaAPI := NewDefaultAPI()
 
 	t.Run("fetch match detail dota2 should be success", func(t *testing.T) {
 		// my personal match id
