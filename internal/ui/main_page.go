@@ -11,22 +11,17 @@ import (
 
 	"github.com/ronaudinho/drt/internal/client/opendota"
 	"github.com/ronaudinho/drt/internal/client/valve"
-	"github.com/ronaudinho/drt/internal/util"
 )
 
 type App struct {
 	*tview.Application
-	openDotaAPI *opendota.OpenDotaAPI
+	openDotaAPI *opendota.API
 	replayAPI   *valve.Replay
 }
 
-func NewApp(
-	app *tview.Application,
-	openDotaAPI *opendota.OpenDotaAPI,
-	replayAPI *valve.Replay,
-) *App {
+func NewApp(openDotaAPI *opendota.API, replayAPI *valve.Replay) *App {
 	return &App{
-		Application: app,
+		Application: tview.NewApplication(),
 		openDotaAPI: openDotaAPI,
 		replayAPI:   replayAPI,
 	}
@@ -35,40 +30,21 @@ func NewApp(
 func (a *App) MainPage(ctx context.Context) error {
 	var err error
 
-	layoutListDownload := tview.NewFlex().
-		SetDirection(tview.FlexRow)
-
-	txtDownloads := tview.NewTextView().
-		SetText("Downloads").
-		SetTextAlign(tview.AlignLeft)
-
-	listDownload := tview.NewList()
-
-	listReplay := a.getListDownload()
-
-	for _, replay := range listReplay {
-		// TODO:
-		// add binding to `selected func` redirect to new page
-		// which will display a replay
-		listDownload.AddItem(replay, "", '-', nil)
-	}
-
-	textView := tview.NewTextView().
+	title := tview.NewTextView().
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignCenter).
-		SetText("DotA2 Replay")
-	textView.SetBorder(true)
+		SetText("dota 2 replay").
+		SetBorder(true)
 
 	var matchID string
-
 	form := tview.NewForm().
-		AddInputField("Match ID", "", 20, nil, func(text string) {
+		AddInputField("match id", "", 20, nil, func(text string) {
 			matchID = text
 		}).
-		AddButton("Find", func() {
+		AddButton("find", func() {
 			defer func() {
 				if err != nil {
-					log.Println("Failed to find match")
+					log.Println("failed to find match")
 					os.Exit(1)
 				} else {
 					// TODO:
@@ -76,21 +52,17 @@ func (a *App) MainPage(ctx context.Context) error {
 				}
 			}()
 
-			var matchIDInt int64
-
-			matchIDInt, err = strconv.ParseInt(matchID, 10, 64)
+			matchIDInt, err := strconv.ParseInt(matchID, 10, 64)
 			if err != nil {
 				return
 			}
 
 			matchDetail, err := a.openDotaAPI.FetchMatchDetail(ctx, matchIDInt)
-
 			if err != nil {
 				return
 			}
 
 			err = a.replayAPI.Download(ctx, matchDetail.ReplayURL, valve.DefaultDestination)
-
 			if err != nil {
 				return
 			}
@@ -104,30 +76,40 @@ func (a *App) MainPage(ctx context.Context) error {
 		SetHorizontal(true)
 
 	form.SetBorder(true).
-		SetTitle("Find DotA2 Match ID").
+		SetTitle("find dota 2 match id").
 		SetTitleAlign(tview.AlignCenter)
 
-	layoutListDownload.
-		AddItem(txtDownloads, 0, 1, false).
-		AddItem(listDownload, 0, 2, false)
-	layoutListDownload.SetBorder(true)
+	downloads := tview.NewFlex().
+		SetDirection(tview.FlexRow)
+	downloadsTitle := tview.NewTextView().
+		SetText("downloads").
+		SetTextAlign(tview.AlignLeft)
+	downloadsList := tview.NewList()
 
-	rootLayout := tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(textView, 0, 1, false).
-		AddItem(form, 0, 2, false).
-		AddItem(layoutListDownload, 0, 2, false)
-
-	err = a.Application.SetRoot(rootLayout, true).SetFocus(form).Run()
-
-	if err != nil {
-		return err
+	replays := a.getDownloadedReplays()
+	for _, replay := range replays {
+		// TODO:
+		// add binding to `selected func` redirect to new page
+		// which will display a replay
+		downloadsList.AddItem(replay, "", '-', nil)
 	}
 
-	return nil
+	downloads.
+		AddItem(downloadsTitle, 0, 1, false).
+		AddItem(downloadsList, 0, 2, false).
+		SetBorder(true)
+
+	root := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(title, 0, 1, false).
+		AddItem(form, 0, 2, false).
+		AddItem(downloads, 0, 2, false)
+
+	return a.Application.SetRoot(root, true).SetFocus(form).Run()
 }
 
-func (App) getListDownload() []string {
-	listReplay := make([]string, 0)
+func (App) getDownloadedReplays() []string {
+	var replays []string
 
 	files, err := os.ReadDir(valve.DefaultDestination)
 	if err != nil {
@@ -135,13 +117,13 @@ func (App) getListDownload() []string {
 	}
 
 	for _, file := range files {
-		if strings.HasSuffix(file.Name(), util.DefaultReplayExtensionSuffix) {
+		if strings.HasSuffix(file.Name(), valve.DefaultReplayExtensionSuffix) {
 			// NOTE
 			// using `strings.Cut` so we not iterate to all string value
-			replayName, _, _ := strings.Cut(file.Name(), util.DefaultReplayExtensionSuffix)
-			listReplay = append(listReplay, replayName)
+			replay, _, _ := strings.Cut(file.Name(), valve.DefaultReplayExtensionSuffix)
+			replays = append(replays, replay)
 		}
 	}
 
-	return listReplay
+	return replays
 }

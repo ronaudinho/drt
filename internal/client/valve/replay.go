@@ -6,15 +6,17 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
-)
-
-var (
-	ErrDownloadRelpay = fmt.Errorf("failed to download the dota2 replay")
+	"path"
+	"path/filepath"
 )
 
 const (
-	DefaultDestination = "/tmp"
+	DefaultDestination           = "/tmp"
+	DefaultReplayExtensionSuffix = ".dem.bz2"
+)
+
+var (
+	ErrDownloadReplay = fmt.Errorf("failed to download dota 2 replay")
 )
 
 type Replay struct {
@@ -27,6 +29,11 @@ func NewReplay(httpClient *http.Client) *Replay {
 	}
 }
 
+// NewDefaultReplay creates a Replay with default params.
+func NewDefaultReplay() *Replay {
+	return NewReplay(http.DefaultClient)
+}
+
 // Download
 // downloading the replay file is downloaded directly to the
 // Valve replay proxy using the replayURL.
@@ -36,21 +43,19 @@ func NewReplay(httpClient *http.Client) *Replay {
 // Based on that value, we can download the replay DotA2 file directly using that URL.
 //
 // destination parameter specifies the file destination to save the downloaded replay file.
-func (r *Replay) Download(ctx context.Context, replayURL string, destination string) error {
-	fileName := getFileName(replayURL)
+func (r *Replay) Download(ctx context.Context, url, dir string) error {
+	fileName := path.Base(url)
 
 	// create location for destination file
 	// example:
 	// /tmp/${filename}
-	name := fmt.Sprintf("%s/%s", destination, fileName)
-
-	isExist := isReplayAlreadyExist(name)
-
+	dst := filepath.Join(dir, fileName)
+	isExist := isReplayAlreadyExist(dst)
 	if isExist {
 		return nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, replayURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
@@ -62,10 +67,10 @@ func (r *Replay) Download(ctx context.Context, replayURL string, destination str
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return ErrDownloadRelpay
+		return ErrDownloadReplay
 	}
 
-	file, err := os.Create(name)
+	file, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
@@ -79,14 +84,6 @@ func (r *Replay) Download(ctx context.Context, replayURL string, destination str
 	return nil
 }
 
-func getFileName(replayURL string) string {
-	s := strings.Split(replayURL, "/")
-
-	fileName := s[len(s)-1]
-
-	return fileName
-}
-
 // isReplayAlreadyExist
 //
 // given path and file name, check if file is already exist in the path or not
@@ -94,6 +91,5 @@ func getFileName(replayURL string) string {
 // otherwise, need to download it first
 func isReplayAlreadyExist(file string) bool {
 	_, err := os.Stat(file)
-
 	return err == nil
 }
