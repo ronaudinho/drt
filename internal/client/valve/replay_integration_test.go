@@ -18,7 +18,7 @@ func TestDownload(t *testing.T) {
 		// can be read here: https://docs.opendota.com/#tag/matches%2Fpaths%2F~1matches~1%7Bmatch_id%7D%2Fget
 		replayURL := "http://replay153.valve.net/570/7132230434_1635105612.dem.bz2"
 
-		r := NewReplay(http.DefaultClient)
+		r := NewDefaultReplay()
 
 		ctx := context.Background()
 
@@ -32,7 +32,7 @@ func TestDownload(t *testing.T) {
 	t.Run("download dota2 replay file should be failed due to invalid replay url", func(t *testing.T) {
 		replayURL := "http://replay153.valve.net/570"
 
-		r := NewReplay(http.DefaultClient)
+		r := NewDefaultReplay()
 
 		ctx := context.Background()
 

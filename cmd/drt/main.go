@@ -1,18 +1,21 @@
 package main
 
 import (
+	"context"
 	"log"
 
-	"github.com/rivo/tview"
+	"github.com/ronaudinho/drt/internal/client/opendota"
+	"github.com/ronaudinho/drt/internal/client/valve"
 	"github.com/ronaudinho/drt/internal/ui"
 )
 
 func main() {
-	application := tview.NewApplication()
+	ctx := context.Background()
+	openDotaAPI := opendota.NewDefaultAPI()
+	replayAPI := valve.NewDefaultReplay()
 
-	app := ui.NewApp(application)
-
-	if err := app.MainPage(); err != nil {
+	app := ui.NewApp(openDotaAPI, replayAPI)
+	if err := app.MainPage(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
