@@ -55,9 +55,9 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View implements tea.Model.
 func (m drtModel) View() string {
 	// Header
-	s := "drt v0.0.1\n"
+	s := "drt v0.0.1\n\n"
 	// TODO: parse the timer into minutes and seconds like in DotA2
-	s += fmt.Sprintf("%v seconds elapsed\n\n", m.secondsElapsed)
+	s += fmt.Sprintf("\t\t%v seconds elapsed\n", m.secondsElapsed)
 	// Main Content
 	// TODO: draw map: wrap in function and add scaling for the width and height so the map can made bigger or smaller
 	for x := 0; x < width; x++ {
