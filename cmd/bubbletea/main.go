@@ -8,6 +8,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+const (
+	width  = 30
+	height = 30
+)
+
 type drtModel struct {
 	messageToUser  string
 	counter        int
@@ -54,6 +59,13 @@ func (m drtModel) View() string {
 	// TODO: parse the timer into minutes and seconds like in DotA2
 	s += fmt.Sprintf("%v seconds elapsed\n\n", m.secondsElapsed)
 	// Main Content
+	// TODO: draw map: wrap in function and add scaling for the width and height so the map can made bigger or smaller
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			s += "⬜️"
+		}
+		s += "\n"
+	}
 	s += fmt.Sprintf("%s\n\n", m.messageToUser)
 	// Footer
 	s += "Press 'q' to quit"
