@@ -41,6 +41,7 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tick()
 	case tea.KeyMsg:
 		switch msg.String() {
+		// TODO: use qwer, etc shortcuts to show networth, kill, lasthit, bb status, etc
 		case "q":
 			m.messageToUser = "q pressed"
 			return m, tea.Quit
