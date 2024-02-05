@@ -3,23 +3,37 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type drtModel struct {
-	messageToUser string
-	counter       int
+	messageToUser  string
+	counter        int
+	secondsElapsed int
 }
+
+type tickMsg struct{}
 
 // Init implements tea.Model.
 func (drtModel) Init() tea.Cmd {
-	return nil
+	return tick()
+}
+
+func tick() tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(1 * time.Second)
+		return tickMsg{}
+	}
 }
 
 // Update implements tea.Model.
 func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tickMsg:
+		m.secondsElapsed++
+		return m, tick()
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q":
@@ -36,7 +50,9 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View implements tea.Model.
 func (m drtModel) View() string {
 	// Header
-	s := "drt v0.0.1\n\n"
+	s := "drt v0.0.1\n"
+	// TODO: parse the timer into minutes and seconds like in DotA2
+	s += fmt.Sprintf("%v seconds elapsed\n\n", m.secondsElapsed)
 	// Main Content
 	s += fmt.Sprintf("%s\n\n", m.messageToUser)
 	// Footer
