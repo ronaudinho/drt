@@ -1,12 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/dotabuff/manta"
 )
 
 const (
@@ -18,6 +22,8 @@ type drtModel struct {
 	messageToUser  string
 	counter        int
 	secondsElapsed int
+	tickPositions  map[uint32]map[string]pos
+	currentTick    uint32
 }
 
 // TODO: this currently only holds x-y pos but we can
@@ -41,7 +47,7 @@ var myUnits = map[string]pos{
 type tickMsg struct{}
 
 // Init implements tea.Model.
-func (drtModel) Init() tea.Cmd {
+func (m drtModel) Init() tea.Cmd {
 	return tick()
 }
 
@@ -56,7 +62,42 @@ func tick() tea.Cmd {
 func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tickMsg:
+
 		m.secondsElapsed++
+
+		keys := make([]uint32, 0, len(m.tickPositions))
+		for k := range m.tickPositions {
+			keys = append(keys, k)
+		}
+
+		sort.Slice(keys, func(i, j int) bool {
+			return keys[i] < keys[j]
+		})
+
+		// TODO: need trial and error to know how many ticks to show per second
+		// TODO: separate tick for secondsElapsed and tickCounter
+		// secondsElapsed have 1 seconds delay which make tickcounter got delayed too
+		tickCounter := 0
+		tickInSeconds := 50
+		for _, k := range keys {
+			// for current replay with ID 7569667371
+			// the match started at tick 19k++, so tick below that will have static CX, CY
+			if m.currentTick < 20000 {
+				m.currentTick = k
+				continue
+			}
+			if m.currentTick != 0 && m.currentTick >= k {
+				continue
+			}
+			m.messageToUser = fmt.Sprintf("%v: %v", k, m.tickPositions[k])
+			m.currentTick = k
+
+			tickCounter++
+			if tickCounter >= tickInSeconds {
+				tickCounter = 0
+				break
+			}
+		}
 		return m, tick()
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -111,9 +152,67 @@ func (m drtModel) View() string {
 }
 
 func main() {
-	p := tea.NewProgram(drtModel{})
+	mapPositions, err := parse("7569667371")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	model := drtModel{}
+	model.tickPositions = mapPositions
+
+	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
 		fmt.Println("Error running program: ", err)
 		os.Exit(1)
 	}
+}
+
+func parse(id string) (map[uint32]map[string]pos, error) {
+	f, err := os.Open(fmt.Sprintf("%s.dem", id))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	p, err := manta.NewStreamParser(f)
+	if err != nil {
+		return nil, err
+	}
+
+	units := make(map[uint32]map[string]pos)
+	p.OnEntity(func(e *manta.Entity, op manta.EntityOp) error {
+		c := e.GetClassName()
+		if !strings.HasPrefix(c, "CDOTA_Unit_Hero_") {
+			return nil
+		}
+		c = strings.TrimPrefix(c, "CDOTA_Unit_Hero_")
+		// TODO: find a way to get timestamp instead
+		// using tick does not seem like the best idea
+		t := p.Tick
+		cx, _ := e.GetUint32("CBodyComponent.m_cellX")
+		cy, _ := e.GetUint32("CBodyComponent.m_cellY")
+		// vx, _ := e.GetFloat32("CBodyComponent.m_vecX")
+		// vy, _ := e.GetFloat32("CBodyComponent.m_vecY")
+
+		if _, ok := units[t]; !ok {
+			units[t] = make(map[string]pos)
+		}
+		units[t][c] = pos{
+			CX: cx,
+			CY: cy,
+		}
+		return nil
+	})
+
+	p.Start()
+
+	for k, v := range units {
+		if len(v) < 10 {
+			delete(units, k)
+		}
+	}
+	// TODO: json? really?
+	b, _ := json.MarshalIndent(units, "", "  ")
+	os.WriteFile(fmt.Sprintf("%s.json", id), b, 0666)
+	return units, nil
 }
