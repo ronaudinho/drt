@@ -65,6 +65,7 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 
 		m.secondsElapsed++
+		m.messageToUser = ""
 
 		keys := make([]uint32, 0, len(m.tickPositions))
 		for k := range m.tickPositions {
