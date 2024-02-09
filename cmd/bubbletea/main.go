@@ -19,11 +19,12 @@ const (
 )
 
 type drtModel struct {
-	messageToUser  string
-	counter        int
-	secondsElapsed int
-	tickPositions  map[uint32]map[string]pos
-	currentTick    uint32
+	messageToUser                          string
+	temporaryMessageToDisplayTickPositions string
+	counter                                int
+	secondsElapsed                         int
+	tickPositions                          map[uint32]map[string]pos
+	currentTick                            uint32
 }
 
 // TODO: this currently only holds x-y pos but we can
@@ -89,7 +90,7 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.currentTick != 0 && m.currentTick >= k {
 				continue
 			}
-			m.messageToUser = fmt.Sprintf("%v: %v", k, m.tickPositions[k])
+			m.temporaryMessageToDisplayTickPositions = fmt.Sprintf("%v: %v", k, m.tickPositions[k])
 			m.currentTick = k
 
 			tickCounter++
@@ -105,6 +106,12 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q":
 			m.messageToUser = "q pressed"
 			return m, tea.Quit
+		case "a":
+			m.messageToUser = "a pressed"
+			m.currentTick -= 10000
+		case "d":
+			m.messageToUser = "d pressed"
+			m.currentTick += 10000
 		default:
 			m.messageToUser = "Key pressed: " + msg.String()
 		}
@@ -144,10 +151,13 @@ func (m drtModel) View() string {
 		}
 		s += "\n"
 	}
+	s += fmt.Sprintf("%s\n\n", m.temporaryMessageToDisplayTickPositions)
 	s += fmt.Sprintf("%s\n\n", m.messageToUser)
 
 	// Footer
 	s += "Press 'q' to quit"
+	s += "\nPress 'a' to seek backward by -10k tick"
+	s += "\nPress 'd' to seek forward by +10k tick"
 	return s
 }
 
