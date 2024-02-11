@@ -28,6 +28,14 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 var keys = internal.KeyMap{
+	Networth: key.NewBinding(
+		key.WithKeys("q"),
+		key.WithHelp("q", "Networth"),
+	),
+	Kill: key.NewBinding(
+		key.WithKeys("w"),
+		key.WithHelp("w", "Kill"),
+	),
 	Left: key.NewBinding(
 		key.WithKeys("left", "a"),
 		key.WithHelp("<-/a", "seek backward by -10k tick"),
@@ -37,8 +45,8 @@ var keys = internal.KeyMap{
 		key.WithHelp("->/d", "seek forward by +10k tick"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "esc", "ctrl+c"),
-		key.WithHelp("q", "quit"),
+		key.WithKeys("esc", "ctrl+c"),
+		key.WithHelp("esc/ctrl+c", "quit"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),
@@ -309,6 +317,14 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tick()
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, m.keys.Networth):
+			m.messageToUser = "Network toggled"
+			newTable := initTable("Population")
+			m.table = newTable
+		case key.Matches(msg, m.keys.Kill):
+			m.messageToUser = "Kill toggled"
+			newTable := initTable("Rank")
+			m.table = newTable
 		case key.Matches(msg, m.keys.Left):
 			m.messageToUser = "a pressed"
 			m.currentTick -= 10000
