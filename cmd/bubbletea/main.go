@@ -213,7 +213,7 @@ func parse(id string) (map[uint32]map[string]pos, error) {
 	}
 
 	units := make(map[uint32]map[string]pos)
-	p.OnEntity(func(e *manta.Entity, op manta.EntityOp) error {
+	p.OnEntity(func(e *manta.Entity, _ manta.EntityOp) error {
 		c := e.GetClassName()
 		if !strings.HasPrefix(c, "CDOTA_Unit_Hero_") {
 			return nil
