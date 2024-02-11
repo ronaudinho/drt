@@ -36,13 +36,25 @@ var keys = internal.KeyMap{
 }
 
 type drtModel struct {
+	tickPositions                          map[uint32]map[string]pos
 	messageToUser                          string
 	temporaryMessageToDisplayTickPositions string
 	keys                                   internal.KeyMap
 	counter                                int
 	secondsElapsed                         int
-	tickPositions                          map[uint32]map[string]pos
 	currentTick                            uint32
+}
+
+func newModel() drtModel {
+	mapPositions, err := parse("7569667371")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return drtModel{
+		keys:          keys,
+		tickPositions: mapPositions,
+	}
 }
 
 // TODO: this currently only holds x-y pos but we can
@@ -181,15 +193,7 @@ func (m drtModel) View() string {
 }
 
 func main() {
-	mapPositions, err := parse("7569667371")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	model := drtModel{}
-	model.tickPositions = mapPositions
-
-	p := tea.NewProgram(model)
+	p := tea.NewProgram(newModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Println("Error running program: ", err)
 		os.Exit(1)
