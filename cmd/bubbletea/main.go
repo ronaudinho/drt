@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dotabuff/manta"
@@ -23,20 +24,25 @@ const (
 var keys = internal.KeyMap{
 	Left: key.NewBinding(
 		key.WithKeys("left", "a"),
-		key.WithHelp("<-/a", "move left"),
+		key.WithHelp("<-/a", "seek backward by -10k tick"),
 	),
 	Right: key.NewBinding(
 		key.WithKeys("right", "d"),
-		key.WithHelp("->/d", "move right"),
+		key.WithHelp("->/d", "seek forward by +10k tick"),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("q", "esc", "ctrl+c"),
 		key.WithHelp("q", "quit"),
 	),
+	Help: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "toggle help"),
+	),
 }
 
 type drtModel struct {
 	tickPositions                          map[uint32]map[string]pos
+	help                                   help.Model
 	messageToUser                          string
 	temporaryMessageToDisplayTickPositions string
 	keys                                   internal.KeyMap
@@ -53,6 +59,7 @@ func newModel() drtModel {
 
 	return drtModel{
 		keys:          keys,
+		help:          help.New(),
 		tickPositions: mapPositions,
 	}
 }
@@ -142,6 +149,8 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Quit):
 			m.messageToUser = "q pressed"
 			return m, tea.Quit
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
 		// TODO: use qwer, etc shortcuts to show networth, kill, lasthit, bb status, etc
 		default:
 			m.messageToUser = "Key pressed: " + msg.String()
@@ -186,9 +195,7 @@ func (m drtModel) View() string {
 	s += fmt.Sprintf("%s\n\n", m.messageToUser)
 
 	// Footer
-	s += "Press 'q' to quit"
-	s += "\nPress 'a' to seek backward by -10k tick"
-	s += "\nPress 'd' to seek forward by +10k tick"
+	s += m.help.View(m.keys)
 	return s
 }
 
