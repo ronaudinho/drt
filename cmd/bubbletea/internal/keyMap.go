@@ -6,4 +6,18 @@ type KeyMap struct {
 	Left  key.Binding
 	Right key.Binding
 	Quit  key.Binding
+	Help  key.Binding
+}
+
+// FullHelp implements help.KeyMap.
+func (k KeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Left, k.Right}, // first column
+		{k.Help, k.Quit},  // second column
+	}
+}
+
+// ShortHelp implements help.KeyMap.
+func (k KeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Help, k.Quit}
 }

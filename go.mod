@@ -9,6 +9,8 @@ require (
 	github.com/stretchr/testify v1.8.2
 )
 
+require github.com/charmbracelet/lipgloss v0.9.1 // indirect
+
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/bubbles v0.18.0
