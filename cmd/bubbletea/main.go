@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dotabuff/manta"
+	"github.com/ronaudinho/drt/cmd/bubbletea/internal"
 )
 
 const (
@@ -18,9 +20,25 @@ const (
 	height = 30
 )
 
+var keys = internal.KeyMap{
+	Left: key.NewBinding(
+		key.WithKeys("left", "a"),
+		key.WithHelp("<-/a", "move left"),
+	),
+	Right: key.NewBinding(
+		key.WithKeys("right", "d"),
+		key.WithHelp("->/d", "move right"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("q", "esc", "ctrl+c"),
+		key.WithHelp("q", "quit"),
+	),
+}
+
 type drtModel struct {
 	messageToUser                          string
 	temporaryMessageToDisplayTickPositions string
+	keys                                   internal.KeyMap
 	counter                                int
 	secondsElapsed                         int
 	tickPositions                          map[uint32]map[string]pos
@@ -102,17 +120,17 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tick()
 	case tea.KeyMsg:
-		switch msg.String() {
-		// TODO: use qwer, etc shortcuts to show networth, kill, lasthit, bb status, etc
-		case "q":
-			m.messageToUser = "q pressed"
-			return m, tea.Quit
-		case "a":
+		switch {
+		case key.Matches(msg, m.keys.Left):
 			m.messageToUser = "a pressed"
 			m.currentTick -= 10000
-		case "d":
+		case key.Matches(msg, m.keys.Right):
 			m.messageToUser = "d pressed"
 			m.currentTick += 10000
+		case key.Matches(msg, m.keys.Quit):
+			m.messageToUser = "q pressed"
+			return m, tea.Quit
+		// TODO: use qwer, etc shortcuts to show networth, kill, lasthit, bb status, etc
 		default:
 			m.messageToUser = "Key pressed: " + msg.String()
 		}
