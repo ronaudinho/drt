@@ -231,17 +231,10 @@ func initTable(columnName string) table.Model {
 }
 
 func newModel() drtModel {
-	// TODO: make parse non-blocking to faster start time and maybe display loading bar while it parsing
-	// usefull in the future too if we want to parse multiple replay files or change the replay file
-	mapPositions, err := parse("7569667371")
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	return drtModel{
 		keys:          keys,
 		help:          help.New(),
-		tickPositions: mapPositions,
+		tickPositions: map[uint32]map[string]pos{},
 		// Rank or Population
 		table:       initTable("Rank"),
 		XYPositions: map[string]pos{},
@@ -254,12 +247,11 @@ type pos struct {
 	CX, CY, VX, VY uint32
 }
 
-type tickMsg struct{}
-
-// Init implements tea.Model.
-func (m drtModel) Init() tea.Cmd {
-	return tick()
-}
+// type that returned for tea.Cmd
+type (
+	tickMsg           struct{}
+	loadReplayDataMsg struct{ mapPositions map[uint32]map[string]pos }
+)
 
 func tick() tea.Cmd {
 	return func() tea.Msg {
@@ -268,10 +260,31 @@ func tick() tea.Cmd {
 	}
 }
 
+func loadReplayData() tea.Cmd {
+	return func() tea.Msg {
+		mapPositions, err := parse("7569667371")
+		if err != nil {
+			log.Fatal(err)
+		}
+		return loadReplayDataMsg{mapPositions}
+	}
+}
+
+// Init implements tea.Model.
+func (m drtModel) Init() tea.Cmd {
+	// TODO: add features to load replay data from list of downloaded replays
+	// TODO: maybe integrate cmd/drt feature to download replay and list downloaded replay
+	return loadReplayData()
+}
+
 // Update implements tea.Model.
 func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
+	case loadReplayDataMsg:
+		m.tickPositions = msg.mapPositions
+		// TODO: replace tick with minutes and seconds like in DotA2 (h:m), maybe add night and day cycle
+		return m, tick()
 	case tickMsg:
 
 		m.secondsElapsed++
