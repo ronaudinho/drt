@@ -231,6 +231,8 @@ func initTable(columnName string) table.Model {
 }
 
 func newModel() drtModel {
+	// TODO: make parse non-blocking to faster start time and maybe display loading bar while it parsing
+	// usefull in the future too if we want to parse multiple replay files or change the replay file
 	mapPositions, err := parse("7569667371")
 	if err != nil {
 		log.Fatal(err)
