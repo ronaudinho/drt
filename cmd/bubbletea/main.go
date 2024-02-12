@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,8 +20,10 @@ import (
 )
 
 const (
-	width  = 30
-	height = 30
+	// TODO: too small width and height make the scale not accurate
+	// but too big width and height make the terminal window too big
+	width  = 20
+	height = 20
 )
 
 var baseStyle = lipgloss.NewStyle().
@@ -56,9 +59,11 @@ var keys = internal.KeyMap{
 
 type drtModel struct {
 	tickPositions                          map[uint32]map[string]pos
+	XYPositions                            map[string]pos
 	help                                   help.Model
 	messageToUser                          string
 	temporaryMessageToDisplayTickPositions string
+	printUnitNames                         string
 	keys                                   internal.KeyMap
 	table                                  table.Model
 	counter                                int
@@ -236,7 +241,8 @@ func newModel() drtModel {
 		help:          help.New(),
 		tickPositions: mapPositions,
 		// Rank or Population
-		table: initTable("Rank"),
+		table:       initTable("Rank"),
+		XYPositions: map[string]pos{},
 	}
 }
 
@@ -244,18 +250,6 @@ func newModel() drtModel {
 // incorporate other units related data into this
 type pos struct {
 	CX, CY, VX, VY uint32
-}
-
-// TODO: replace this dummy data examples with the actual json file
-var myUnits = map[string]pos{
-	// H1, H2: spawn in bottom left radiant base
-	// H3, H3: spawn in top right dire base
-	// BUG: if CX and CY have same value, it should appear on top each other not draw another box
-	// TODO: need more tests if CX, CY bigger than drawed map width and height
-	"H1": {CX: 28, CY: 1, VX: 0, VY: 0},
-	"H2": {CX: 29, CY: 2, VX: 0, VY: 0},
-	"H3": {CX: 0, CY: 28, VX: 0, VY: 0},
-	"H4": {CX: 1, CY: 29, VX: 0, VY: 0},
 }
 
 type tickMsg struct{}
@@ -295,6 +289,7 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// secondsElapsed have 1 seconds delay which make tickcounter got delayed too
 		tickCounter := 0
 		tickInSeconds := 50
+		// keys is ticks that sorted in ascending order
 		for _, k := range keys {
 			// for current replay with ID 7569667371
 			// the match started at tick 19k++, so tick below that will have static CX, CY
@@ -305,8 +300,11 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.currentTick != 0 && m.currentTick >= k {
 				continue
 			}
-			m.temporaryMessageToDisplayTickPositions = fmt.Sprintf("%v: %v", k, m.tickPositions[k])
 			m.currentTick = k
+
+			units := m.tickPositions[k]
+			xmax, ymax := width, height
+			m.XYPositions = scaleCXCY(units, xmax, ymax)
 
 			tickCounter++
 			if tickCounter >= tickInSeconds {
@@ -346,38 +344,74 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// TODO: code from rsc, maybe use the code directly from rsc as a package
+func scaleCXCY(units map[string]pos, xmax int, ymax int) map[string]pos {
+	scaledUnits := make(map[string]pos)
+
+	for name, unitPos := range units {
+		xp := float32((int(unitPos.CX) - 68)) / float32(120)
+		yp := float32((int(unitPos.CY) - 68)) / float32(120)
+		xx := int(xp * float32(xmax))
+		yy := int((1 - yp) * float32(ymax))
+		scaledUnits[name] = pos{
+			CX: uint32(xx),
+			CY: uint32(yy),
+		}
+	}
+
+	return scaledUnits
+}
+
 // View implements tea.Model.
 func (m drtModel) View() string {
 	// Header
 	s := "drt v0.0.1\n\n"
 	// TODO: parse the timer into minutes and seconds like in DotA2
-	s += fmt.Sprintf("\t\t%v seconds elapsed\n", m.secondsElapsed)
+	s += fmt.Sprintf("\t\t\t\t\t%v seconds elapsed\n", m.secondsElapsed)
 
 	// Main Content
-	// TODO: draw map: wrap in function and add scaling for the width and height so the map can made bigger or smaller
-	// XYPositions := drawUnits(myUnits)
-	XYPositions := myUnits
 	for x := 0; x < width; x++ {
+		// s += strconv.Itoa(x + 11)
 		for y := 0; y < height; y++ {
-			keys := make([]string, 0)
-			for k := range XYPositions {
-				keys = append(keys, k)
+			sb := strings.Builder{}
+
+			sortedUnitName := make([]string, 0)
+			for k := range m.XYPositions {
+				sortedUnitName = append(sortedUnitName, k)
 			}
-			sort.Strings(keys)
-			for _, k := range keys {
-				if XYPositions[k].CX == uint32(x) && XYPositions[k].CY == uint32(y) {
-					// remove previous defautl block
-					s = s[:len(s)-len("⬜️")]
-					// TODO: replace yellow box with DotA2 hero icons
-					s += "🟨"
+			sort.Strings(sortedUnitName)
+
+			// TODO: find a better way to drawn multiple units in the same position instead just ignoring it
+			anUnitAlreadyDrawnThere := false
+			sb.WriteString("\n")
+
+			for i, unitName := range sortedUnitName {
+				// TODO: find a way to groups the unit by team instead of sorted by unitName
+				sb.WriteString(unitName[:3] + ": " + unitName + "\t")
+				if i == 4 {
+					sb.WriteString("\n")
+				}
+
+				if anUnitAlreadyDrawnThere {
+					continue
+				}
+				if m.XYPositions[unitName].CX == uint32(x) && m.XYPositions[unitName].CY == uint32(y) {
+					s += unitName[:3]
+					anUnitAlreadyDrawnThere = true
 				}
 			}
 
-			s += "⬜️"
+			if !anUnitAlreadyDrawnThere {
+				s += "---"
+			}
+			m.printUnitNames = sb.String()
 		}
 		s += "\n"
 	}
-	s += fmt.Sprintf("%s\n\n", m.temporaryMessageToDisplayTickPositions)
+
+	s += fmt.Sprintf("tick: %s", strconv.Itoa(int(m.currentTick)))
+	s += fmt.Sprintf("%s\n", m.temporaryMessageToDisplayTickPositions)
+	s += fmt.Sprintf("%s\n", m.printUnitNames)
 	s += m.messageToUser
 
 	// Footer
