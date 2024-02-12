@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -66,6 +67,7 @@ type drtModel struct {
 	printUnitNames                         string
 	keys                                   internal.KeyMap
 	table                                  table.Model
+	spinner                                spinner.Model
 	counter                                int
 	secondsElapsed                         int
 	currentTick                            uint32
@@ -231,6 +233,10 @@ func initTable(columnName string) table.Model {
 }
 
 func newModel() drtModel {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
 	return drtModel{
 		keys:          keys,
 		help:          help.New(),
@@ -238,6 +244,7 @@ func newModel() drtModel {
 		// Rank or Population
 		table:       initTable("Rank"),
 		XYPositions: map[string]pos{},
+		spinner:     s,
 	}
 }
 
@@ -381,59 +388,65 @@ func scaleCXCY(units map[string]pos, xmax int, ymax int) map[string]pos {
 func (m drtModel) View() string {
 	// Header
 	s := "drt v0.0.1\n\n"
-	// TODO: parse the timer into minutes and seconds like in DotA2
-	s += fmt.Sprintf("\t\t\t\t\t%v seconds elapsed\n", m.secondsElapsed)
 
-	// Main Content
-	for x := 0; x < width; x++ {
-		// s += strconv.Itoa(x + 11)
-		for y := 0; y < height; y++ {
-			sb := strings.Builder{}
+	if len(m.tickPositions) == 0 {
+		s += fmt.Sprintf("\n\n   %s Loading forever...press \tesc/ctrl+c\t to quit\n\n", m.spinner.View())
+	} else {
+		// TODO: parse the timer into minutes and seconds like in DotA2
+		s += fmt.Sprintf("\t\t\t\t\t%v seconds elapsed\n", m.secondsElapsed)
 
-			sortedUnitName := make([]string, 0)
-			for k := range m.XYPositions {
-				sortedUnitName = append(sortedUnitName, k)
-			}
-			sort.Strings(sortedUnitName)
+		// Main Content
+		for x := 0; x < width; x++ {
+			// s += strconv.Itoa(x + 11)
+			for y := 0; y < height; y++ {
+				sb := strings.Builder{}
 
-			// TODO: find a better way to drawn multiple units in the same position instead just ignoring it
-			anUnitAlreadyDrawnThere := false
-			sb.WriteString("\n")
+				sortedUnitName := make([]string, 0)
+				for k := range m.XYPositions {
+					sortedUnitName = append(sortedUnitName, k)
+				}
+				sort.Strings(sortedUnitName)
 
-			for i, unitName := range sortedUnitName {
-				// TODO: find a way to groups the unit by team instead of sorted by unitName
-				sb.WriteString(unitName[:3] + ": " + unitName + "\t")
-				if i == 4 {
-					sb.WriteString("\n")
+				// TODO: find a better way to drawn multiple units in the same position instead just ignoring it
+				anUnitAlreadyDrawnThere := false
+				sb.WriteString("\n")
+
+				for i, unitName := range sortedUnitName {
+					// TODO: find a way to groups the unit by team instead of sorted by unitName
+					sb.WriteString(unitName[:3] + ": " + unitName + "\t")
+					if i == 4 {
+						sb.WriteString("\n")
+					}
+
+					if anUnitAlreadyDrawnThere {
+						continue
+					}
+					if m.XYPositions[unitName].CX == uint32(x) && m.XYPositions[unitName].CY == uint32(y) {
+						s += unitName[:3]
+						anUnitAlreadyDrawnThere = true
+					}
 				}
 
-				if anUnitAlreadyDrawnThere {
-					continue
+				if !anUnitAlreadyDrawnThere {
+					s += "---"
 				}
-				if m.XYPositions[unitName].CX == uint32(x) && m.XYPositions[unitName].CY == uint32(y) {
-					s += unitName[:3]
-					anUnitAlreadyDrawnThere = true
-				}
+				m.printUnitNames = sb.String()
 			}
-
-			if !anUnitAlreadyDrawnThere {
-				s += "---"
-			}
-			m.printUnitNames = sb.String()
+			s += "\n"
 		}
-		s += "\n"
-	}
 
-	s += fmt.Sprintf("tick: %s", strconv.Itoa(int(m.currentTick)))
-	s += fmt.Sprintf("%s\n", m.temporaryMessageToDisplayTickPositions)
-	s += fmt.Sprintf("%s\n", m.printUnitNames)
+		s += fmt.Sprintf("tick: %s", strconv.Itoa(int(m.currentTick)))
+		s += fmt.Sprintf("%s\n", m.temporaryMessageToDisplayTickPositions)
+		s += fmt.Sprintf("%s\n", m.printUnitNames)
+
+		s += "\n\n"
+		s += m.table.View()
+	}
 	s += m.messageToUser
 
 	// Footer
 	s += "\n\n"
 	s += m.help.View(m.keys)
-	s += "\n\n"
-	s += m.table.View()
 	return baseStyle.Render(s) + "\n"
 }
 
