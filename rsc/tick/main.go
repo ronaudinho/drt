@@ -11,7 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// TODO this currently only holds x-y pos but we can
+// TODO: this currently only holds x-y pos but we can
 // incorporate other units related data into this
 type pos struct {
 	CX, CY, VX, VY uint32
@@ -22,7 +22,7 @@ func main() {
 		log.Fatal("id not supplied")
 	}
 	id := os.Args[1]
-	// TODO inmem map is not the best way to approach this
+	// TODO: inmem map is not the best way to approach this
 	m, err := parse(id)
 	if err != nil {
 		log.Fatal(err)
@@ -43,7 +43,7 @@ func main() {
 	s.Clear()
 
 	xmax, ymax := s.Size()
-	// TODO make this seekable
+	// TODO: make this seekable
 	// this currently only shows position of hero* units
 	// at whatever timestamp that is accessed
 	for n, u := range m {
@@ -65,7 +65,7 @@ func main() {
 	ox := -1
 	for {
 		s.Show()
-		// TODO PollEvent is probably not the best option
+		// TODO: PollEvent is probably not the best option
 		// as we will have events coming in without input
 		// when playing the replay
 		// we can of course use s.PostEvent() but the amount
@@ -84,7 +84,7 @@ func main() {
 				s.Clear()
 			}
 		case *tcell.EventMouse:
-			// TODO this does nothing but draw box
+			// TODO: this does nothing but draw box
 			x, y := ev.Position()
 			switch ev.Buttons() {
 			case tcell.Button1:
@@ -105,7 +105,7 @@ func main() {
 func drawUnits(s tcell.Screen, style tcell.Style, units map[string]pos) {
 	xmax, ymax := s.Size()
 	y := 2
-	// TODO xmax and ymax for cell, tentatively using 68 and 188
+	// TODO: xmax and ymax for cell, tentatively using 68 and 188
 	for name, pos := range units {
 		xp := float32((int(pos.CX) - 68)) / float32(120)
 		yp := float32((int(pos.CY) - 68)) / float32(120)
@@ -180,7 +180,7 @@ func parse(id string) (map[uint32]map[string]pos, error) {
 			return nil
 		}
 		c = strings.TrimPrefix(c, "CDOTA_Unit_Hero_")
-		// TODO find a way to get timestamp instead
+		// TODO: find a way to get timestamp instead
 		// using tick does not seem like the best idea
 		t := p.Tick
 		cx, _ := e.GetUint32("CBodyComponent.m_cellX")
@@ -205,7 +205,7 @@ func parse(id string) (map[uint32]map[string]pos, error) {
 			delete(units, k)
 		}
 	}
-	// TODO json? really?
+	// TODO: json? really?
 	b, _ := json.MarshalIndent(units, "", "  ")
 	os.WriteFile(fmt.Sprintf("%s.json", id), b, 0666)
 	return units, nil

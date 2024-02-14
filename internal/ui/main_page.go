@@ -47,8 +47,7 @@ func (a *App) MainPage(ctx context.Context) error {
 					log.Println("failed to find match")
 					os.Exit(1)
 				} else {
-					// TODO:
-					// redirect to new page
+					// TODO: redirect to new page
 				}
 			}()
 
@@ -67,8 +66,7 @@ func (a *App) MainPage(ctx context.Context) error {
 				return
 			}
 
-			// TODO
-			// If match id is already exists in local folder then
+			// TODO: If match id is already exists in local folder then
 			// 	- binding to new page which will display a replay
 			// otherwise
 			// 	- download first then redirect to new page which will display a replay
@@ -88,8 +86,7 @@ func (a *App) MainPage(ctx context.Context) error {
 
 	replays := a.getDownloadedReplays()
 	for _, replay := range replays {
-		// TODO:
-		// add binding to `selected func` redirect to new page
+		// TODO: add binding to `selected func` redirect to new page
 		// which will display a replay
 		downloadsList.AddItem(replay, "", '-', nil)
 	}
