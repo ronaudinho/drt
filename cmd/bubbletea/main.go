@@ -58,20 +58,28 @@ var keys = internal.KeyMap{
 	),
 }
 
+type sessionState int
+
 type drtModel struct {
 	tickPositions                          map[uint32]map[string]pos
 	XYPositions                            map[string]pos
 	help                                   help.Model
+	printUnitNames                         string
 	messageToUser                          string
 	temporaryMessageToDisplayTickPositions string
-	printUnitNames                         string
 	keys                                   internal.KeyMap
 	table                                  table.Model
 	spinner                                spinner.Model
+	state                                  sessionState
 	counter                                int
 	secondsElapsed                         int
 	currentTick                            uint32
 }
+
+const (
+	showLoading sessionState = iota
+	showReplay
+)
 
 // TODO: replace this dummy data examples with the actual parsed DotA2 replay json file
 // TODO: add keyMap to show/hide networth, kill, lasthit, bb status, etc by dynamically changing the table column
@@ -290,6 +298,10 @@ func (m drtModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case loadReplayDataMsg:
 		m.tickPositions = msg.mapPositions
+
+		if len(m.tickPositions) != 0 {
+			m.state = showReplay
+		}
 		// TODO: replace tick with minutes and seconds like in DotA2 (h:m), maybe add night and day cycle
 		return m, tick()
 	case tickMsg:
@@ -384,63 +396,73 @@ func scaleCXCY(units map[string]pos, xmax int, ymax int) map[string]pos {
 	return scaledUnits
 }
 
+func (m drtModel) replayView(s string) string {
+	// TODO: parse the timer into minutes and seconds like in DotA2
+	s += fmt.Sprintf("\t\t\t\t\t%v seconds elapsed\n", m.secondsElapsed)
+
+	// Main Content
+	for x := 0; x < width; x++ {
+		// BUG: this append on s for debugging to show row numbers, but a critical bug found when this commented
+		// bug unitName displayed multiple times
+		s += strconv.Itoa(x + 11)
+		// using empty string didn't fix the bug
+		// s += "  "
+		for y := 0; y < height; y++ {
+			sb := strings.Builder{}
+
+			sortedUnitName := make([]string, 0)
+			for k := range m.XYPositions {
+				sortedUnitName = append(sortedUnitName, k)
+			}
+			sort.Strings(sortedUnitName)
+
+			// TODO: find a better way to drawn multiple units in the same position instead just ignoring it
+			anUnitAlreadyDrawnThere := false
+			sb.WriteString("\n")
+
+			for i, unitName := range sortedUnitName {
+				// TODO: find a way to groups the unit by team instead of sorted by unitName
+				sb.WriteString(unitName[:3] + ": " + unitName + "\t")
+				if i == 4 {
+					sb.WriteString("\n")
+				}
+
+				if anUnitAlreadyDrawnThere {
+					continue
+				}
+				if m.XYPositions[unitName].CX == uint32(x) && m.XYPositions[unitName].CY == uint32(y) {
+					s += unitName[:3]
+					anUnitAlreadyDrawnThere = true
+				}
+			}
+
+			if !anUnitAlreadyDrawnThere {
+				s += "---"
+			}
+			m.printUnitNames = sb.String()
+		}
+		s += "\n"
+	}
+
+	s += fmt.Sprintf("tick: %s", strconv.Itoa(int(m.currentTick)))
+	s += fmt.Sprintf("%s\n", m.temporaryMessageToDisplayTickPositions)
+	s += fmt.Sprintf("%s\n", m.printUnitNames)
+
+	s += "\n\n"
+	s += m.table.View()
+	return s
+}
+
 // View implements tea.Model.
 func (m drtModel) View() string {
 	// Header
 	s := "drt v0.0.1\n\n"
 
-	if len(m.tickPositions) == 0 {
+	switch m.state {
+	case showLoading:
 		s += fmt.Sprintf("\n\n   %s Loading forever...press \tesc/ctrl+c\t to quit\n\n", m.spinner.View())
-	} else {
-		// TODO: parse the timer into minutes and seconds like in DotA2
-		s += fmt.Sprintf("\t\t\t\t\t%v seconds elapsed\n", m.secondsElapsed)
-
-		// Main Content
-		for x := 0; x < width; x++ {
-			// s += strconv.Itoa(x + 11)
-			for y := 0; y < height; y++ {
-				sb := strings.Builder{}
-
-				sortedUnitName := make([]string, 0)
-				for k := range m.XYPositions {
-					sortedUnitName = append(sortedUnitName, k)
-				}
-				sort.Strings(sortedUnitName)
-
-				// TODO: find a better way to drawn multiple units in the same position instead just ignoring it
-				anUnitAlreadyDrawnThere := false
-				sb.WriteString("\n")
-
-				for i, unitName := range sortedUnitName {
-					// TODO: find a way to groups the unit by team instead of sorted by unitName
-					sb.WriteString(unitName[:3] + ": " + unitName + "\t")
-					if i == 4 {
-						sb.WriteString("\n")
-					}
-
-					if anUnitAlreadyDrawnThere {
-						continue
-					}
-					if m.XYPositions[unitName].CX == uint32(x) && m.XYPositions[unitName].CY == uint32(y) {
-						s += unitName[:3]
-						anUnitAlreadyDrawnThere = true
-					}
-				}
-
-				if !anUnitAlreadyDrawnThere {
-					s += "---"
-				}
-				m.printUnitNames = sb.String()
-			}
-			s += "\n"
-		}
-
-		s += fmt.Sprintf("tick: %s", strconv.Itoa(int(m.currentTick)))
-		s += fmt.Sprintf("%s\n", m.temporaryMessageToDisplayTickPositions)
-		s += fmt.Sprintf("%s\n", m.printUnitNames)
-
-		s += "\n\n"
-		s += m.table.View()
+	case showReplay:
+		s = m.replayView(s)
 	}
 	s += m.messageToUser
 
